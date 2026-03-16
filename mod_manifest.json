@@ -1,0 +1,7 @@
+﻿{
+  "pck_name": "Sts2PathHelper",
+  "name": "STS2 Path Helper",
+  "author": "XMeow",
+  "description": "一个用于 Slay the Spire 2 的地图路径规划小助手，支持在地图上快速预览精英/问号/商店优先路线。\nA Slay the Spire 2 map route helper that previews elite-heavy, question-mark-heavy, or shop-heavy paths directly on the map.",
+  "version": "0.1.0"
+}
