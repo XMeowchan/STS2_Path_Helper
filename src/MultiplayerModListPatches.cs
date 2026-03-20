@@ -4,7 +4,7 @@ using MegaCrit.Sts2.Core.Modding;
 
 namespace Sts2PathHelper;
 
-[HarmonyPatch(typeof(ModManager), nameof(ModManager.GetModNameList))]
+[HarmonyPatch(typeof(ModManager), nameof(ModManager.GetGameplayRelevantModNameList))]
 internal static class MultiplayerModListPatch
 {
     private static bool _loggedHide;

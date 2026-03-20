@@ -9,18 +9,17 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-$modId = [string]$manifest.pck_name
+$manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+$modId = [string]$manifest.id
 $modName = [string]$manifest.name
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json is missing pck_name."
-}
 if ([string]::IsNullOrWhiteSpace($modName)) {
     $modName = $modId
 }
 
 $buildOut = Join-Path $projectRoot "src\bin\$Configuration"
 $stagedModDir = Join-Path $PayloadRoot $modId
+$shippingManifestPath = Join-Path $buildOut (Get-ShippingManifestFileName -Manifest $manifest)
+$shippingConfigPath = Join-Path $buildOut (Get-ShippingConfigFileName)
 
 if (-not $SkipBuild) {
     $buildArgs = @(
@@ -40,7 +39,9 @@ if (-not $SkipBuild) {
 
 $requiredArtifacts = @(
     (Join-Path $buildOut "$modId.dll"),
-    (Join-Path $buildOut "$modId.pck")
+    (Join-Path $buildOut "$modId.pck"),
+    $shippingManifestPath,
+    $shippingConfigPath
 )
 
 foreach ($artifactPath in $requiredArtifacts) {
@@ -58,11 +59,12 @@ if (Test-Path -LiteralPath $stagedModDir) {
 }
 New-Item -ItemType Directory -Force -Path $stagedModDir | Out-Null
 
+Remove-LegacyModFiles -ModDir $stagedModDir
 Copy-Item (Join-Path $buildOut "$modId.dll") (Join-Path $stagedModDir "$modId.dll") -Force
 Copy-Item (Join-Path $buildOut "$modId.pck") (Join-Path $stagedModDir "$modId.pck") -Force
 Set-PckCompatibilityHeader -Path (Join-Path $stagedModDir "$modId.pck") -EngineMinorVersion 5
-Copy-Item (Join-Path $projectRoot "mod_manifest.json") (Join-Path $stagedModDir "mod_manifest.json") -Force
-Copy-Item (Join-Path $projectRoot "config.json") (Join-Path $stagedModDir "config.json") -Force
+Copy-Item $shippingManifestPath (Join-Path $stagedModDir (Split-Path $shippingManifestPath -Leaf)) -Force
+Copy-Item $shippingConfigPath (Join-Path $stagedModDir (Split-Path $shippingConfigPath -Leaf)) -Force
 
 $stagedDllPath = Join-Path $stagedModDir "$modId.dll"
 if ((Test-CodeSigningConfigured) -and (-not (Test-AuthenticodeSignatureValid -Path $stagedDllPath))) {

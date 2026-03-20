@@ -8,11 +8,8 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-$modId = [string]$manifest.pck_name
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json is missing pck_name."
-}
+$manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+$modId = [string]$manifest.id
 
 $modName = [string]$manifest.name
 if ([string]::IsNullOrWhiteSpace($modName)) {
@@ -31,6 +28,8 @@ $godot = Resolve-GodotExecutable
 $buildOut = Join-Path $srcDir "bin\$Configuration"
 $dllPath = Join-Path $buildOut "$modId.dll"
 $pckPath = Join-Path $buildOut "$modId.pck"
+$shippingManifestPath = Join-Path $buildOut (Get-ShippingManifestFileName -Manifest $manifest)
+$shippingConfigPath = Join-Path $buildOut (Get-ShippingConfigFileName)
 
 New-Item -ItemType Directory -Force -Path $buildOut | Out-Null
 
@@ -55,9 +54,14 @@ foreach ($artifactPath in @($dllPath, $pckPath)) {
     }
 }
 
+Write-ShippingModManifest -Manifest $manifest -OutputPath $shippingManifestPath
+Copy-Item (Get-ProjectConfigPath -ProjectRoot $projectRoot) $shippingConfigPath -Force
+
 Invoke-AuthenticodeCodeSigning -Path $dllPath -Description $modName
 
 Write-Host "Detected game dir: $resolvedGameDir"
 Write-Host "Built DLL: $dllPath"
 Write-Host ("Verified PCK compatibility header: Godot {0}.{1}" -f $pckHeader.Major, $pckHeader.Minor)
 Write-Host "Built PCK: $pckPath"
+Write-Host "Built mod manifest: $shippingManifestPath"
+Write-Host "Staged config: $shippingConfigPath"

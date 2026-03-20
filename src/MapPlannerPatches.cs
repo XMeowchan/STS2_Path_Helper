@@ -17,14 +17,13 @@ internal static class MapPlannerPatches
     [HarmonyPostfix]
     private static void MapScreenSetMapPostfix(NMapScreen __instance)
     {
-        MapPlannerController.GetFor(__instance)?.ScheduleRefresh();
+        MapPlannerController.GetFor(__instance)?.ResetForMap();
     }
 
-    [HarmonyPatch(typeof(NMapScreen), nameof(NMapScreen.Open))]
+    [HarmonyPatch(typeof(NMapScreen), "OnClearMapDrawingButtonPressed")]
     [HarmonyPostfix]
-    private static void MapScreenOpenPostfix(NMapScreen __instance)
+    private static void MapScreenClearMapDrawingButtonPressedPostfix(NMapScreen __instance)
     {
-        MapPlannerController.GetFor(__instance)?.ScheduleRefresh();
+        MapPlannerController.GetFor(__instance)?.ClearPlanningState();
     }
-
 }

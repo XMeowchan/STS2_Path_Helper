@@ -25,13 +25,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "build-installer-payload failed."
 }
 
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-$modId = [string]$manifest.pck_name
+$manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+$modId = [string]$manifest.id
 $appName = [string]$manifest.name
 $appPublisher = [string]$manifest.author
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json is missing pck_name."
-}
 if ([string]::IsNullOrWhiteSpace($appName)) {
     $appName = $modId
 }

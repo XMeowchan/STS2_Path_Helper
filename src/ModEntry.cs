@@ -33,13 +33,15 @@ public static class ModEntry
             }
 
             ModDirectory = ResolveModDirectory();
-            LoadManifest(Path.Combine(ModDirectory, "mod_manifest.json"));
-            Config = ModConfig.Load(Path.Combine(ModDirectory, "config.json"));
+            LoadManifest(ResolveManifestPath(ModDirectory));
+            Config = ModConfig.Load(
+                Path.Combine(ModDirectory, ModConfig.PrimaryFileName),
+                Path.Combine(ModDirectory, ModConfig.LegacyFileName));
 
             if (!Config.Enabled)
             {
                 _initialized = true;
-                Log.Info($"{ModId}: disabled by config.json.", 2);
+                Log.Info($"{ModId}: disabled by {ModConfig.PrimaryFileName}.", 2);
                 return;
             }
 
@@ -66,9 +68,12 @@ public static class ModEntry
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(manifest.PckName))
+            string? manifestId = !string.IsNullOrWhiteSpace(manifest.Id)
+                ? manifest.Id
+                : manifest.LegacyPckName;
+            if (!string.IsNullOrWhiteSpace(manifestId))
             {
-                ModId = manifest.PckName.Trim();
+                ModId = manifestId.Trim();
             }
 
             if (!string.IsNullOrWhiteSpace(manifest.Name))
@@ -79,6 +84,22 @@ public static class ModEntry
         catch
         {
         }
+    }
+
+    private static string ResolveManifestPath(string modDirectory)
+    {
+        string assemblyPath = Assembly.GetExecutingAssembly().Location;
+        string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
+        if (!string.IsNullOrWhiteSpace(assemblyName))
+        {
+            string newManifestPath = Path.Combine(modDirectory, $"{assemblyName}.json");
+            if (File.Exists(newManifestPath))
+            {
+                return newManifestPath;
+            }
+        }
+
+        return Path.Combine(modDirectory, "mod_manifest.json");
     }
 
     private static string ResolveModDirectory()

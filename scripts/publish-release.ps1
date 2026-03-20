@@ -10,9 +10,10 @@
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
 function Get-Manifest {
-    return Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
+    return Get-ProjectManifest -ProjectRoot $projectRoot
 }
 
 function New-ReleaseNotes {
@@ -319,13 +320,13 @@ function Publish-ReleaseAssets {
 
 $manifest = Get-Manifest
 $version = [string]$manifest.version
-$modId = [string]$manifest.pck_name
+$modId = [string]$manifest.id
 $modName = [string]$manifest.name
 if ([string]::IsNullOrWhiteSpace($version)) {
     throw "mod_manifest.json does not contain a version."
 }
 if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json does not contain pck_name."
+    throw "mod_manifest.json does not contain id."
 }
 if ([string]::IsNullOrWhiteSpace($modName)) {
     $modName = $modId

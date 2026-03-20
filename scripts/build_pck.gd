@@ -20,12 +20,6 @@ func _initialize() -> void:
         quit(err)
         return
 
-    err = packer.add_file("res://mod_manifest.json", ProjectSettings.globalize_path("res://mod_manifest.json"))
-    if err != OK:
-        push_error("Failed to add mod manifest: %s" % err)
-        quit(err)
-        return
-
     var files := {}
     if pack_root != "":
         _collect_files(ProjectSettings.globalize_path(pack_root), "res://%s" % mod_id, files)
@@ -61,7 +55,7 @@ func _load_manifest() -> Dictionary:
     return {}
 
 func _resolve_mod_id(manifest: Dictionary) -> String:
-    var mod_id := String(manifest.get("pck_name", DEFAULT_MOD_ID)).strip_edges()
+    var mod_id := String(manifest.get("id", DEFAULT_MOD_ID)).strip_edges()
     if mod_id == "":
         return DEFAULT_MOD_ID
     return mod_id

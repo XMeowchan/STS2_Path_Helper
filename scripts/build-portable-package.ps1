@@ -6,6 +6,7 @@
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
 $payloadArgs = @(
     "-ExecutionPolicy", "Bypass",
@@ -24,11 +25,8 @@ if ($LASTEXITCODE -ne 0) {
     throw "build-installer-payload failed."
 }
 
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-$modId = [string]$manifest.pck_name
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json is missing pck_name."
-}
+$manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+$modId = [string]$manifest.id
 
 $payloadDir = Join-Path $projectRoot "dist\installer\payload\$modId"
 if (-not (Test-Path -LiteralPath $payloadDir)) {

@@ -1,5 +1,104 @@
 Set-StrictMode -Version Latest
 
+function Get-ProjectManifest {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ProjectRoot
+    )
+
+    $manifestPath = Join-Path $ProjectRoot "mod_manifest.json"
+    if (-not (Test-Path -LiteralPath $manifestPath)) {
+        throw "mod_manifest.json not found: $manifestPath"
+    }
+
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $modId = [string]$manifest.id
+    if ([string]::IsNullOrWhiteSpace($modId)) {
+        throw "mod_manifest.json is missing id."
+    }
+
+    if ($null -eq $manifest.PSObject.Properties["has_dll"]) {
+        $manifest | Add-Member -NotePropertyName has_dll -NotePropertyValue $true
+    }
+    if ($null -eq $manifest.PSObject.Properties["has_pck"]) {
+        $manifest | Add-Member -NotePropertyName has_pck -NotePropertyValue $true
+    }
+    if ($null -eq $manifest.PSObject.Properties["affects_gameplay"]) {
+        $manifest | Add-Member -NotePropertyName affects_gameplay -NotePropertyValue $true
+    }
+
+    return $manifest
+}
+
+function Get-ShippingManifestFileName {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$Manifest
+    )
+
+    return ("{0}.json" -f ([string]$Manifest.id).Trim())
+}
+
+function Get-ShippingConfigFileName {
+    return "config.cfg"
+}
+
+function Get-ProjectConfigPath {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ProjectRoot
+    )
+
+    return (Join-Path $ProjectRoot "config.json")
+}
+
+function Write-ShippingModManifest {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$Manifest,
+        [Parameter(Mandatory)]
+        [string]$OutputPath
+    )
+
+    $shippingManifest = [ordered]@{
+        id               = [string]$Manifest.id
+        name             = [string]$Manifest.name
+        author           = [string]$Manifest.author
+        description      = [string]$Manifest.description
+        version          = [string]$Manifest.version
+        has_pck          = [bool]$Manifest.has_pck
+        has_dll          = [bool]$Manifest.has_dll
+        affects_gameplay = [bool]$Manifest.affects_gameplay
+    }
+
+    if ($null -ne $Manifest.PSObject.Properties["dependencies"] -and $null -ne $Manifest.dependencies) {
+        $shippingManifest.dependencies = @($Manifest.dependencies)
+    }
+
+    $directory = Split-Path -Parent $OutputPath
+    if (-not [string]::IsNullOrWhiteSpace($directory)) {
+        New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    }
+
+    $shippingManifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
+}
+
+function Remove-LegacyModFiles {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ModDir
+    )
+
+    foreach ($legacyPath in @(
+        (Join-Path $ModDir "mod_manifest.json"),
+        (Join-Path $ModDir "config.json")
+    )) {
+        if (Test-Path -LiteralPath $legacyPath) {
+            Remove-Item -LiteralPath $legacyPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Resolve-ExistingPath {
     param(
         [Parameter(Mandatory)]
